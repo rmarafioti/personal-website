@@ -1,4 +1,5 @@
-// The site navigation: the logo and links on desktop, a Home link and a menu button on mobile.
+// The site navigation: the site name and links on desktop, a Home link and a menu button on
+// mobile.
 // The current page's link is highlighted and marked aria-current. A Client Component for the
 // mobile menu's open state and the current path.
 "use client";
@@ -7,8 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import ResponsiveThemeImage from "@/app/_components/ResponsiveThemeImage";
-import { logo } from "@/app/_data/photos";
+import { SITE_NAME } from "@/app/_lib/siteMetadata";
 
 /* naming conventions to define responsive design */
 import pc from "@/app/_styling/navbar.module.css";
@@ -16,17 +16,17 @@ import mobile from "@/app/_styling/mobile_nav.module.css";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/featureOne", label: "One" },
-  { href: "/featureTwo", label: "Two" },
-  { href: "/featureThree", label: "Three" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  // A section's link stays highlighted on its sub-pages (Blog on a post).
   function isActive(href) {
-    return pathname === href;
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   function toggleMenu() {
@@ -40,7 +40,9 @@ export default function Navbar() {
   return (
     <>
       <nav>
-        <ResponsiveThemeImage photoData={logo} className={pc.nav_icon} />
+        <Link href="/" className={pc.nav_icon}>
+          {SITE_NAME}
+        </Link>
         <div className={pc.link_container}>
           {NAV_LINKS.map(({ href, label }) => (
             <Link

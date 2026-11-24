@@ -1,0 +1,12 @@
+/* A post's body (PostBody.jsx): only the functional styles docs/cms/posts.md requires. */
+
+/* The site owner's line breaks show. */
+.paragraph {
+  white-space: pre-line;
+}
+
+/* A large photo never overflows its container. */
+.image {
+  max-width: 100%;
+  height: auto;
+}
