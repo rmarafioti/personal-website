@@ -1,30 +1,30 @@
-// The home page: placeholder copy, the hero image and the contact form.
-import ContactForm from "@/app/_components/forms/ContactForm";
-import FadeInSection from "@/app/_components/FadeInSection";
-import ResponsiveImage from "@/app/_components/ResponsiveImage";
-import { heroPhoto } from "@/app/_data/photos";
+// The home page: who Rich is, in a line, and his newest posts from the CMS.
+import Link from "next/link";
 
-import styles from "@/app/_styling/landing_page.module.css";
+import PostList from "@/app/_components/blog/PostList";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/app/_lib/siteMetadata";
+
+// How many of the newest posts the home page shows.
+const LATEST_POST_COUNT = 3;
 
 export const metadata = {
-  title: "Home",
-  description: "Landing page placeholder description",
+  title: { absolute: SITE_NAME },
+  description: SITE_DESCRIPTION,
 };
 
 export default function Home() {
   return (
     <main>
-      <FadeInSection>
-        <h1>Landing Page</h1>
-        <h2>
-          Lorem ipsum dolor sit amet consectetur adipiscing elit. Dolor sit amet
-          consectetur adipiscing elit quisque faucibus.
-        </h2>
-        <div className={styles.image_container}>
-          <ResponsiveImage photoData={heroPhoto} />
-        </div>
-        <ContactForm />
-      </FadeInSection>
+      <h1>{SITE_NAME}</h1>
+      <p>
+        Analytics engineer. I write here about analytics engineering, data
+        modeling and the tools I build.
+      </p>
+      <section aria-labelledby="latest-posts">
+        <h2 id="latest-posts">Latest posts</h2>
+        <PostList limit={LATEST_POST_COUNT} />
+        <Link href="/blog">All posts</Link>
+      </section>
     </main>
   );
 }

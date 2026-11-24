@@ -1,16 +1,11 @@
-# CLAUDE.md — <!-- FILL: the website's name -->
+# CLAUDE.md — Rich Marafioti
 
 @docs/cms/client-website.md
 @docs/site.md
 
-**Template or client website:** run `git remote get-url origin` first.
-
-- **`rmarafioti/frontend_scaffold`:** this is the template every new 3D Web Dev client website starts from (Use this template on GitHub). You are maintaining the template: keep every `FILL:` marker, keep the placeholders generic, and never add anything one site needs. A rule changed here reaches only repos made after it, never an existing client repo. This file and `docs/site.md` are written from the CMS backend's session (`rmarafioti/3d_wd_backend`, `CLAUDE.md` → Documentation Sync); the code is written here.
-- **Any other repo:** this is a new client website made from the template. Before any other work, fill every marker (`grep -rn --exclude-dir=node_modules --exclude-dir=cms 'FILL:' .`) as the backend's `docs/deploy.md` → Onboarding a client website, path B step 4 says, then delete this paragraph.
-
 ## Project Overview
 
-<!-- FILL: one paragraph: the site, its URL, who it is for, and which of its content the site owner manages in the CMS (posts, a gallery, or none yet). -->
+Rich Marafioti's personal website (`https://www.richmarafioti.com`): for now a short landing page about Rich, an analytics engineer, and his blog, whose long posts he links to from shorter LinkedIn posts. Rich is the site owner: he writes the posts in the CMS (the posts ability). The site is barebones and will grow; what it adds next isn't decided yet. It was made from the `rmarafioti/frontend_scaffold` template and is a 3DWD client like any other, kept in step with `rmarafioti/client-kit` by its Sync workflow.
 
 The site owner manages part of the site's content in the 3D Web Dev Headless CMS. This site fetches that content from the CMS's public API and renders it. Everything else on the site (pages, layout, styling, its own images) lives in this repo.
 
@@ -20,7 +15,7 @@ The site owner manages part of the site's content in the 3D Web Dev Headless CMS
 
 This site has no login, no database, no user accounts and no stored user data. Its connection to the CMS is specced in full in `docs/cms/` (the base, `client-website.md`, plus a doc per ability), and what is particular to this site in `docs/site.md`.
 
-Production: this site runs on Vercel at <!-- FILL: the production URL -->. The CMS API runs at `https://api.3dwebdev.com`.
+Production: this site runs on Vercel at `https://www.richmarafioti.com`. The CMS API runs at `https://api.3dwebdev.com`.
 
 ## Site Details
 
@@ -31,7 +26,7 @@ This site's details (URL, Vercel project, media and static folders, pages, the c
 - Framework: Next.js (current stable, App Router) / JavaScript
 - Rendering: static. Server Components by default; CMS content is fetched at build/regeneration time.
 - CMS data: one `server-only` `cmsFetch()` plus a `getX()` function per resource, and `src/app/api/revalidate/route.js` for on-demand revalidation
-- Contact form: a server action, `_lib/sendContactMessage.js`, sending through EmailJS from the server
+- Contact form: a server action, `_lib/sendContactMessage.js`, sending through EmailJS from the server. In the repo but not rendered yet (Standard on every site)
 - Images: `next/image`. CMS images come from this site's upload folder in 3DWD's Cloudinary account; the site's own images live in `public/` or in its own Cloudinary folder.
 - Icons: `react-icons`
 - Testing: Vitest
@@ -49,7 +44,9 @@ root
 │       ├── _components/          *all one-time and reusable components
 │       │   ├── AppWrapper.jsx    *Client Component: the accessibility settings, around every page
 │       │   ├── accessibility/    *AccessMenu.jsx and Toggle.jsx (standard on every site)
-│       │   ├── forms/            *ContactForm.jsx and FormModal.jsx (standard on every site)
+│       │   ├── blog/             *PostList.jsx, PostHeading.jsx and PostBody.jsx: how posts render
+│       │   ├── forms/            *ContactForm.jsx and FormModal.jsx (standard on every site, not rendered yet)
+│       │   ├── FormattedText.jsx *a post paragraph's formatting as React elements (docs/cms/posts.md)
 │       │   ├── FadeInSection.jsx *scaffold element: a section that fades in when scrolled into view
 │       │   ├── ResponsiveImage.jsx      *scaffold element: one image, a desktop and a mobile source
 │       │   └── ResponsiveThemeImage.jsx *scaffold element: one image, a light and a dark source
@@ -59,15 +56,24 @@ root
 │       ├── _layout/              *Navbar.jsx and Footer.jsx
 │       ├── _lib/
 │       │   ├── cmsFetch.js       *the only place the CMS API is called (server-only)
-│       │   └── sendContactMessage.js *server action: the only place the contact form's email is sent
+│       │   ├── getPosts.js       *the published posts, newest first (docs/cms/posts.md)
+│       │   ├── getPost.js        *one post by the /blog/[slug] param, found in getPosts()
+│       │   ├── parseParagraph.js *a paragraph's text as formatting segments (docs/cms/posts.md)
+│       │   ├── formatPostDate.js *a postDate for display, in UTC so the day never shifts
+│       │   ├── siteMetadata.js   *the site's name, production URL and description
+│       │   ├── sendContactMessage.js *server action: the only place the contact form's email is sent
+│       │   └── validateContactMessage.js *the contact form's field checks, in the browser and the server action
 │       ├── _styling/             *all module.css files
 │       ├── api/
 │       │   └── revalidate/
 │       │       └── route.js      *POST only: checks the webhook secret, expires the "cms" tag
-│       ├── featureOne/ … featureThree/ *scaffold elements: placeholder pages, renamed or deleted per site
+│       ├── blog/
+│       │   ├── page.js           */blog: every post
+│       │   └── [slug]/page.js    */blog/<slug>: one post, its Open Graph metadata, 404 when unpublished
 │       ├── globals.css           *global styling, the theme variables
 │       ├── layout.js             *root layout (AppWrapper, Navbar, Footer, site-wide metadata)
-│       └── page.js               *home page
+│       ├── not-found.js          *the site's 404
+│       └── page.js               *home page: who Rich is, and the newest 3 posts
 ├── public/                       *the site's own static files and images (or host its images on Cloudinary)
 ├── docs/
 │   ├── cms/                      *synced unchanged from client-kit, never edited here
@@ -95,8 +101,9 @@ root
 `docs/cms/` is the source of truth for everything between this site and the CMS. Follow it exactly. `client-website.md` is the base (env vars, the API, `cmsFetch()`, images, the revalidate route, the Next.js version check, testing) and is imported above. Each ability has its own doc beside it (`posts.md`, `galleries.md`), read when the work touches that ability. `docs/site.md` says which abilities this site uses.
 
 - **`docs/cms/` is synced from the client-kit repo and never edited here, not even a typo.** Every client website gets the same copy. Its facts come from the CMS backend's docs, and the backend's Documentation Sync keeps client-kit in step. If something in it looks wrong or out of date, tell Rich, and the backend session fixes it in client-kit.
-- **Sync pull requests:** client-kit's Sync workflow opens a PR from `3dwd-sync[bot]` (branch `3dwd-sync/…`) whenever `docs/cms/` changes. Those PRs auto-merge once CI passes, once Rich turns that on. Every other PR waits for Rich.
+- **Sync pull requests:** client-kit's Sync workflow opens a PR from `3dwd-sync[bot]` (branch `3dwd-sync/…`) whenever `docs/cms/` changes. Those PRs auto-merge once CI passes, once this repo's `autoMerge` is `true` in client-kit's `clients.json` (`docs/site.md` → Quirks has the onboarding state). Every other PR waits for Rich.
 - **CI** (`.github/workflows/ci.yml`) fails if `docs/cms/` differs from client-kit's main, or if a sync PR changes anything outside `docs/cms/`. While a sync PR is open, the drift check fails on other PRs until the sync merges.
+- **client-kit leads, this repo follows.** A new ability or a change to one (the CMS contact form ability, `3d_wd_backend#126`, included) is specced in client-kit's `docs/cms/` first and arrives here as a sync PR. Only then is it built here, from that doc. This repo never writes its own spec for anything between the site and the CMS.
 - **A docs-only merge doesn't redeploy:** the Vercel project skips the build when only `docs/` changed.
 - Before writing or changing any caching code, check the installed Next.js version as `docs/cms/client-website.md` → "Check the installed Next.js version" says. Read `AGENTS.md` (written by `next dev`) and the docs bundled in `node_modules/next/dist/docs/`, not memory. Next.js APIs change between versions.
 
@@ -108,7 +115,7 @@ Set up once in the template, then kept by every repo made from it:
 - **`.prettierignore`:** list `docs/cms/`, so `npm run format` never reformats the synced docs (any change there fails CI's drift check).
 - **`vitest.config.mjs`:** the node environment, the setup file, `resolve.alias` for @ → `src` (Vitest doesn't read the `jsconfig.json` paths), and `mockReset`, `unstubEnvs` and `unstubGlobals` set to true.
 - **`src/test/setup.js`:** stubs `server-only`, and sets the `HEADLESS_CMS_*` and `EMAILJS_*` vars to undefined in a `beforeEach`, so a real key or secret can never reach a test.
-- **`next.config.mjs`:** `images.remotePatterns` allows only this site's own folders (`docs/cms/client-website.md` → Images), with the media and static folders as `FILL:` markers in the template.
+- **`next.config.mjs`:** `images.remotePatterns` allows only this site's own folders (`docs/cms/client-website.md` → Images), here the media folder `richmarafioti` and, until Rich has images of his own, the template's `frontend_scaffold` folder.
 - **npm warning:** npm 11 may warn that `unrs-resolver` (from `eslint-config-next`) has an unapproved postinstall script. It's harmless: the platform binary installs as an optional dependency and lint runs fine.
 
 ## Standard on every site
@@ -116,11 +123,11 @@ Set up once in the template, then kept by every repo made from it:
 These are part of every 3D Web Dev client website. They are restyled per site but never removed without Rich saying so.
 
 - **The accessibility menu** (`_components/accessibility/`): Theme (light or dark), Remove Font Style (a plain system font), and Font Size (four steps), with Reset. The visitor's choice in the menu wins over their system preference, in the CSS and in every themed image. Every control is a real button, reachable and usable by keyboard.
-- **The contact form** (`_components/forms/`): full name, email and message, checked in the browser and again on the server, sent by `_lib/sendContactMessage.js`, then a success modal. Only Rich decides a site has none; its files are then deleted, not kept unused.
+- **The contact form** (`_components/forms/`): full name, email and message, checked in the browser and again on the server, sent by `_lib/sendContactMessage.js`, then a success modal. Only Rich decides a site has none; its files are then deleted, not kept unused. On this site it is kept but not rendered: there is no EmailJS account, and the site will likely be the first user of the CMS contact form ability (`3d_wd_backend#126`, Resend), built from its doc once it arrives in `docs/cms/`.
 
 ## Scaffold elements
 
-Optional pieces the template ships so a site can start from them: `FadeInSection`, `ResponsiveImage`, `ResponsiveThemeImage`, `usePhotoGallery`, and the `featureOne` to `featureThree` placeholder pages. In a client website, each one is renamed and used, or deleted once it is clear the site doesn't need it: none is kept unused for later. In the template itself they are kept, and are not raised as dead code.
+Optional pieces the template ships so a site can start from them: `FadeInSection`, `ResponsiveImage`, `ResponsiveThemeImage`, `usePhotoGallery`. This site is barebones and doesn't know yet which it will use, so by Rich's decision they are all kept, used or not, and are not raised as dead code; the same holds for the unrendered contact form. Delete one only when Rich says the site won't need it. The template's `featureOne` to `featureThree` placeholder pages were deleted, since they were live placeholder URLs.
 
 ## Anti-Patterns to Avoid
 
@@ -196,7 +203,6 @@ Keep all code readable and explicit. Comments explain the logic in more abstract
 - Anything that writes to the CMS: no admin pages or editing of CMS content. The site owner uses the CMS dashboard. The contact form is the one form, and it sends an email; it writes nothing to the CMS until the CMS contact form ability exists and `docs/cms/` specs it.
 - Any CMS endpoint not specced in `docs/cms/`.
 - Login, user accounts, a database, or storing any visitor data.
-- A page per post. The CMS sends `postId` (or `galleryId` for a gallery) in the revalidate body for when this is wanted later; it isn't built until Rich asks.
 
 ## Code Style
 
@@ -217,7 +223,7 @@ A review is read-only. It produces findings; it never edits code. Fixes are thei
 ### Checklist
 
 1. **Style is consistent** with Code Style above. If two files do the same thing two ways and neither is documented, raise it as a decision.
-2. **No dead code:** unused imports, components, hooks, files, env vars, commented-out code. In the template, the Scaffold elements are exempt.
+2. **No dead code:** unused imports, components, hooks, files, env vars, commented-out code. The Scaffold elements and the contact form are exempt (Scaffold elements).
 3. **Explicit, then DRY:** extract on the third copy, or the second when the copies could drift.
 4. **Comments are necessary and true**, and every file keeps an accurate header comment.
 5. **Docs match code:** the architecture tree, `docs/site.md`, Progress, `README.md` and `.env.example` describe what is in the repo.
@@ -240,6 +246,8 @@ The boundaries, where a mistake breaks the site silently or leaks a secret:
 
 - **`cmsFetch()`:** returns empty when `HEADLESS_CMS_API_URL` is unset, without calling fetch; sends `GET {url}{path}` with `Authorization: Bearer <key>`; passes `next: { tags: ["cms", tag], revalidate: 3600 }`; returns the unwrapped data; returns the `notFound` value on a `404` when one is given, and throws on a `404` when none is; throws on a non-2xx response (`401`, `429`, `500`).
 - **Each `getX()`:** one test of its wiring: the path, its tag and its empty value.
+- **`getPost()`:** finds the post the route param names, and returns `null` for one that isn't published.
+- **FormattedText:** every row of the rendering examples in `docs/cms/posts.md`.
 - **The revalidate route:** `401` with the documented body for a missing header, a wrong secret, and an unset `HEADLESS_CMS_WEBHOOK_SECRET`; `200` and the cms tag expired for the right secret. For the unset-secret case, send a full `Bearer <secret>`, not `"Bearer "` with nothing after it: header values are trimmed, so it arrives as `"Bearer"` and fails on length alone, and the test would pass even with the guard deleted.
 - **`sendContactMessage()`:** refuses a missing field or a bad email without calling fetch; sends one request to the email service with the message's fields; reports a failure when the service answers with an error, without logging the keys or the message.
 - **The contact form's success modal** renders after a successful send.
@@ -293,13 +301,16 @@ When Rich says to commit, first update Progress below to describe the state afte
 
 ## Progress
 
-<!-- FILL: in a client website, replace this with the site's own progress. -->
+Made from `rmarafioti/frontend_scaffold` (Next 16.4.6, React 19.3.1). Issue #1 (rescoped) filled the template for this site:
 
-Template: these docs were written from the CMS backend (`rmarafioti/3d_wd_backend#125`), and the code matches them since `rmarafioti/frontend_scaffold#21` (which also closed #19, the navbar highlight): the bug fixes, PascalCase names, Server Component pages, the `cmsFetch` and revalidate placeholders with tests, the server-side contact form (`sendContactMessage`, EmailJS REST with the four `EMAILJS_*` vars), the theme fix (a menu choice beats the system; Reset follows the system), the tooling and CI. Next 16.4.6, React 19.3.1.
-
-- Template images: the hero is in the `frontend_scaffold` Cloudinary folder (the default static folder in `next.config.mjs`); the logo and the success-modal photo are grey placeholders in `public/placeholders/`.
+- Every template placeholder marker is filled, and `CLAUDE.md`, `docs/site.md` and `README.md` describe this site.
+- The posts ability per `docs/cms/posts.md`: `getPosts`, `getPost`, FormattedText, and posts on `/` (newest 3), `/blog` and `/blog/[slug]`, with Open Graph and Twitter metadata per post. Tested against a throwaway mock CMS (rendering, the 404, metadata, revalidation) and locally against the production CMS with Rich's test post (header, subHeader, postDate, two paragraphs and an image).
+- Every scaffold element and the contact form are kept, unrendered where unused; the `featureOne` to `featureThree` pages are deleted.
+- The navbar shows Rich's name as text until he has a logo (the logo data and `ResponsiveThemeImage` are kept for it). No social image of the site's own yet: a page or post without an image has no `og:image`.
+- Onboarded to client-kit (`docs/site.md` → Quirks): app installed, listed in `clients.json`, dry run matching, auto-merge and the `cms`/`check` ruleset on. Left: `autoMerge: true` in client-kit.
+- Next: the post slug, once the CMS releases it (only `getPost` and `generateStaticParams` change); the contact form, once #126 arrives in `docs/cms/`; RSS and the newsletter with `frontend_scaffold#25`.
 - Font size steps are 16, 18, 20 and 22px (`AppWrapper.jsx`). Icon buttons are sized as 1em squares with the padding inside, since the global `button` rule would otherwise resize them.
-- Open for the backend session: `docs/site.md`'s Contact form row says the EmailJS account "allows only this site's domain", but the domain allowlist only covers browser sends; server sends need "API for non-browser applications" on and the private key. The architecture tree lists `AGENTS.md`, but `next dev` 16.4.6 did not write one here.
+- Open for the backend session: the architecture tree lists `AGENTS.md`, but `next dev` 16.4.6 did not write one here.
 
 ## Plan Authoring
 
