@@ -18,7 +18,7 @@ export default async function PostList({ limit }) {
         <li key={post.id}>
           <article>
             <PostHeading post={post} as="h2" />
-            <Link href={`/blog/${post.id}`}>Read post</Link>
+            <Link href={`/blog/${post.slug}`}>Read post</Link>
           </article>
         </li>
       ))}

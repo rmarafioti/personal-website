@@ -1,4 +1,5 @@
-// Tests getPost: it finds one post in the CMS's list by the route param, or returns null.
+// Tests getPost: it finds one post in the CMS's list by its slug (the route param), or returns
+// null.
 import { describe, expect, it, vi } from "vitest";
 
 import { mockFetch } from "@/test/helpers";
@@ -8,6 +9,7 @@ import { getPost } from "./getPost";
 const POSTS = [
   {
     id: "post-2",
+    slug: "second-post",
     header: "Second",
     subHeader: null,
     postDate: "2026-02-01",
@@ -17,6 +19,7 @@ const POSTS = [
   },
   {
     id: "post-1",
+    slug: "first-post",
     header: "First",
     subHeader: "The first post",
     postDate: null,
@@ -32,11 +35,11 @@ function stubCmsEnv() {
 }
 
 describe("getPost", () => {
-  it("returns the post whose id matches", async () => {
+  it("returns the post whose slug matches", async () => {
     stubCmsEnv();
     mockFetch({ body: { data: POSTS } });
 
-    const post = await getPost("post-1");
+    const post = await getPost("first-post");
 
     expect(post).toEqual(POSTS[1]);
   });

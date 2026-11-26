@@ -1,9 +1,15 @@
 // The root layout around every page: the navbar, the accessibility settings (AppWrapper) around
-// the page content, the footer, and the site-wide metadata. The favicon is src/app/favicon.ico.
+// the page content, the footer, and the site-wide metadata (including the link to the RSS feed).
+// The favicon is src/app/favicon.ico.
 import AppWrapper from "@/app/_components/AppWrapper";
 import Navbar from "@/app/_layout/Navbar";
 import Footer from "@/app/_layout/Footer";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/app/_lib/siteMetadata";
+import {
+  FEED_ALTERNATE_TYPES,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+} from "@/app/_lib/siteMetadata";
 
 import "./globals.css";
 
@@ -13,6 +19,7 @@ export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: SITE_NAME, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
+  alternates: { types: FEED_ALTERNATE_TYPES },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
