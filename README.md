@@ -1,6 +1,6 @@
 # Rich Marafioti
 
-Rich Marafioti's personal website, `https://www.richmarafioti.com`: a landing page and a blog. A static Next.js site; the blog posts come from the 3D Web Dev Headless CMS, where Rich writes them, and everything else lives in this repo. Made from the `rmarafioti/frontend_scaffold` template.
+Rich Marafioti's personal website, `https://www.richmarafioti.com`: a landing page, a blog with an RSS feed, and a newsletter signup (Buttondown). A static Next.js site; the blog posts come from the 3D Web Dev Headless CMS, where Rich writes them, and everything else lives in this repo. Made from the `rmarafioti/frontend_scaffold` template.
 
 ## Local setup
 

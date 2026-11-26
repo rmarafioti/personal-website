@@ -28,6 +28,7 @@ This site's details (URL, Vercel project, media and static folders, pages, the c
 - CMS data: one `server-only` `cmsFetch()` plus a `getX()` function per resource, and `src/app/api/revalidate/route.js` for on-demand revalidation
 - Contact form: a server action, `_lib/sendContactMessage.js`, sending through EmailJS from the server. In the repo but not rendered yet (Standard on every site)
 - Images: `next/image`. CMS images come from this site's upload folder in 3DWD's Cloudinary account; the site's own images live in `public/` or in its own Cloudinary folder.
+- Newsletter: a server action, `_lib/subscribeToNewsletter.js`, adding subscribers through Buttondown's API from the server, and an RSS feed of the posts at `/feed.xml`
 - Icons: `react-icons`
 - Testing: Vitest
 - Hosting: Vercel, in 3DWD's Vercel Pro team (Hobby is non-commercial only, and client sites pay a hosting fee)
@@ -38,14 +39,14 @@ This site's details (URL, Vercel project, media and static folders, pages, the c
 root
 ├── src/
 │   ├── test/
-│   │   ├── setup.js              *stubs server-only; sets the HEADLESS_CMS_* and EMAILJS_* vars to undefined before each test
+│   │   ├── setup.js              *stubs server-only; sets the HEADLESS_CMS_*, EMAILJS_* and BUTTONDOWN_API_KEY vars to undefined before each test
 │   │   └── helpers.js            *mockFetch (the only fake network) and other edge helpers
 │   └── app/
 │       ├── _components/          *all one-time and reusable components
 │       │   ├── AppWrapper.jsx    *Client Component: the accessibility settings, around every page
 │       │   ├── accessibility/    *AccessMenu.jsx and Toggle.jsx (standard on every site)
 │       │   ├── blog/             *PostList.jsx, PostHeading.jsx and PostBody.jsx: how posts render
-│       │   ├── forms/            *ContactForm.jsx and FormModal.jsx (standard on every site, not rendered yet)
+│       │   ├── forms/            *ContactForm.jsx and FormModal.jsx (standard on every site, not rendered yet); NewsletterForm.jsx (in the Footer)
 │       │   ├── FormattedText.jsx *a post paragraph's formatting as React elements (docs/cms/posts.md)
 │       │   ├── FadeInSection.jsx *scaffold element: a section that fades in when scrolled into view
 │       │   ├── ResponsiveImage.jsx      *scaffold element: one image, a desktop and a mobile source
@@ -58,11 +59,14 @@ root
 │       │   ├── cmsFetch.js       *the only place the CMS API is called (server-only)
 │       │   ├── getPosts.js       *the published posts, newest first (docs/cms/posts.md)
 │       │   ├── getPost.js        *one post by the /blog/[slug] param, found in getPosts()
+│       │   ├── buildFeed.js      *the posts as RSS 2.0, one teaser item per post, guid = the post's id
 │       │   ├── parseParagraph.js *a paragraph's text as formatting segments (docs/cms/posts.md)
 │       │   ├── formatPostDate.js *a postDate for display, in UTC so the day never shifts
-│       │   ├── siteMetadata.js   *the site's name, production URL and description
+│       │   ├── isEmail.js        *the email check shared by the contact form and the newsletter signup
+│       │   ├── siteMetadata.js   *the site's name, production URL, description and RSS alternate link
 │       │   ├── sendContactMessage.js *server action: the only place the contact form's email is sent
-│       │   └── validateContactMessage.js *the contact form's field checks, in the browser and the server action
+│       │   ├── validateContactMessage.js *the contact form's field checks, in the browser and the server action
+│       │   └── subscribeToNewsletter.js *server action: the only place a newsletter subscriber is added (Buttondown)
 │       ├── _styling/             *all module.css files
 │       ├── api/
 │       │   └── revalidate/
@@ -70,6 +74,8 @@ root
 │       ├── blog/
 │       │   ├── page.js           */blog: every post
 │       │   └── [slug]/page.js    */blog/<slug>: one post, its Open Graph metadata, 404 when unpublished
+│       ├── feed.xml/
+│       │   └── route.js          */feed.xml: GET only, static, refreshed with the "cms" tag
 │       ├── globals.css           *global styling, the theme variables
 │       ├── layout.js             *root layout (AppWrapper, Navbar, Footer, site-wide metadata)
 │       ├── not-found.js          *the site's 404
@@ -81,7 +87,7 @@ root
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                *copied unchanged from client-kit's templates/ci.yml: jobs cms (drift) and check (lint, test)
-├── .env.example                  *the HEADLESS_CMS_* and EMAILJS_* names, empty values
+├── .env.example                  *the HEADLESS_CMS_*, EMAILJS_* and BUTTONDOWN_API_KEY names, empty values
 ├── .gitignore                    *create-next-app's, plus !.env.example so the example is committed
 ├── .prettierignore               *docs/cms/, so npm run format never reformats the synced docs
 ├── .prettierrc
@@ -135,13 +141,13 @@ Optional pieces the template ships so a site can start from them: `FadeInSection
 `_lib/cmsFetch.js` is the only place the CMS API is called. It adds the API key, the cache tags and the hourly fallback, unwraps `{ data }` and throws on errors. A second fetch to the CMS anywhere else would drift from those rules.
 
 **Never expose a key or secret:**
-`HEADLESS_CMS_API_KEY`, `HEADLESS_CMS_WEBHOOK_SECRET` and the `EMAILJS_*` keys are server-only. Never prefix them with `NEXT_PUBLIC_`, never read them in a Client Component, never commit them, never log them or an Authorization header.
+`HEADLESS_CMS_API_KEY`, `HEADLESS_CMS_WEBHOOK_SECRET`, the `EMAILJS_*` keys and `BUTTONDOWN_API_KEY` are server-only. Never prefix them with `NEXT_PUBLIC_`, never read them in a Client Component, never commit them, never log them or an Authorization header.
 
 **Never fetch CMS data from the browser:**
 No `useEffect` or client-side hook that calls the CMS. `cmsFetch()` imports `server-only`, and only Server Components call the `getX()` functions. A browser fetch would expose the key and render the content after the page loads, which hurts SEO.
 
-**Never send the contact form from the browser:**
-`ContactForm.jsx` calls the `sendContactMessage` server action; it never imports an email SDK or holds an email key. Changing how messages are sent (the CMS contact form ability, which replaces EmailJS) changes that one file.
+**Never send the contact form or the newsletter signup from the browser:**
+`ContactForm.jsx` calls the `sendContactMessage` server action; it never imports an email SDK or holds an email key. Changing how messages are sent (the CMS contact form ability, which replaces EmailJS) changes that one file. In the same way, `NewsletterForm.jsx` calls the `subscribeToNewsletter` server action, the only place the newsletter vendor is called.
 
 **A page must never quietly become dynamic:**
 Fast static pages and SEO are why this site exists. Don't use `cookies()`, `headers()`, `searchParams`, `cache: "no-store"` or `dynamic = "force-dynamic"` on any page. After any change to one that renders CMS content, confirm in the `next build` output that the page is still ○ or ●, not ƒ.
@@ -246,11 +252,13 @@ The boundaries, where a mistake breaks the site silently or leaks a secret:
 
 - **`cmsFetch()`:** returns empty when `HEADLESS_CMS_API_URL` is unset, without calling fetch; sends `GET {url}{path}` with `Authorization: Bearer <key>`; passes `next: { tags: ["cms", tag], revalidate: 3600 }`; returns the unwrapped data; returns the `notFound` value on a `404` when one is given, and throws on a `404` when none is; throws on a non-2xx response (`401`, `429`, `500`).
 - **Each `getX()`:** one test of its wiring: the path, its tag and its empty value.
-- **`getPost()`:** finds the post the route param names, and returns `null` for one that isn't published.
+- **`getPost()`:** finds the post whose slug the route param names, and returns `null` for one that isn't published.
 - **FormattedText:** every row of the rendering examples in `docs/cms/posts.md`.
 - **The revalidate route:** `401` with the documented body for a missing header, a wrong secret, and an unset `HEADLESS_CMS_WEBHOOK_SECRET`; `200` and the cms tag expired for the right secret. For the unset-secret case, send a full `Bearer <secret>`, not `"Bearer "` with nothing after it: header values are trimmed, so it arrives as `"Bearer"` and fails on length alone, and the test would pass even with the guard deleted.
 - **`sendContactMessage()`:** refuses a missing field or a bad email without calling fetch; sends one request to the email service with the message's fields; reports a failure when the service answers with an error, without logging the keys or the message.
 - **The contact form's success modal** renders after a successful send.
+- **`buildFeed()`:** a valid feed for zero, one and several posts (order kept); the guid is the post's id, not a permalink; characters in a header are escaped; a null header or subHeader is left out; a post without a postDate is dated by its createdAt.
+- **`subscribeToNewsletter()`:** a filled honeypot reports success without calling fetch; a bad email is refused without calling fetch; sends one request to the vendor with the email and the visitor's IP; reports a failure when the vendor answers with an error, without logging.
 - **A bug that was fixed:** write the failing test first, then fix the code, so it can't come back.
 
 Don't write a test for: static markup, styling, metadata, a constant, or Next.js behaviour itself. Rendering is checked by hand (see Manual testing).
@@ -289,7 +297,7 @@ Content created in the CMS for testing belongs to the CMS database. List everyth
   - Self-review the diff against Code Review → Checklist
   - `npm test` green; new or changed boundary code has tests per Unit Tests
   - `npm run lint`, `npm run format` and `npm run build` are clean, and every page builds as static
-  - Every CMS call goes through `cmsFetch()`, and every contact message through `sendContactMessage()`
+  - Every CMS call goes through `cmsFetch()`, every contact message through `sendContactMessage()`, and every newsletter signup through `subscribeToNewsletter()`
   - No secret is `NEXT_PUBLIC_`, committed, logged or read in a Client Component
   - No aesthetic styling added
   - Verified in the browser (`npm run dev`, then `next start` after a build)
@@ -308,7 +316,8 @@ Made from `rmarafioti/frontend_scaffold` (Next 16.4.6, React 19.3.1). Issue #1 (
 - Every scaffold element and the contact form are kept, unrendered where unused; the `featureOne` to `featureThree` pages are deleted.
 - The navbar shows Rich's name as text until he has a logo (the logo data and `ResponsiveThemeImage` are kept for it). No social image of the site's own yet: a page or post without an image has no `og:image`.
 - Onboarded to client-kit (`docs/site.md` → Quirks): app installed, listed in `clients.json`, dry run matching, auto-merge and the `cms`/`check` ruleset on. Left: `autoMerge: true` in client-kit.
-- Next: the post slug, once the CMS releases it (only `getPost` and `generateStaticParams` change); the contact form, once #126 arrives in `docs/cms/`; RSS and the newsletter with `frontend_scaffold#25`.
+- Issue #5: posts are linked and found by their `slug` (`/blog/test-post-header`; the id URL is a 404). `/feed.xml` (static, teaser items, guid = the post's id) and the footer `NewsletterForm` through `subscribeToNewsletter` to Buttondown (pinned `X-API-Version: 2026-11-10`, double opt-in, a honeypot). The RSS link is in every page's `<head>`, from `FEED_ALTERNATE_TYPES` in `siteMetadata.js`, which the post page repeats since its own `alternates` replaces the layout's. Tested locally against production: a real signup, its confirmation and the subscriber in Buttondown. Left for Rich: write each new-post email in Buttondown by hand, until the RSS-to-email add-on.
+- Next: the contact form, once #126 arrives in `docs/cms/`.
 - Font size steps are 16, 18, 20 and 22px (`AppWrapper.jsx`). Icon buttons are sized as 1em squares with the padding inside, since the global `button` rule would otherwise resize them.
 - Open for the backend session: the architecture tree lists `AGENTS.md`, but `next dev` 16.4.6 did not write one here.
 

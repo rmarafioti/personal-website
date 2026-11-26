@@ -1,14 +1,17 @@
 // One post's page, at /blog/<slug>: its heading, its body, and the metadata that gives it a
 // preview when it is shared (LinkedIn reads Open Graph). Every published post is built at build
 // time; one published later renders on its first visit and is cached. A post that isn't
-// published shows the site's 404. Until the CMS adds a slug to posts, the slug is the post's id.
+// published shows the site's 404.
 import { notFound } from "next/navigation";
 
 import PostBody from "@/app/_components/blog/PostBody";
 import PostHeading from "@/app/_components/blog/PostHeading";
 import { getPost } from "@/app/_lib/getPost";
 import { getPosts } from "@/app/_lib/getPosts";
-import { SITE_DESCRIPTION } from "@/app/_lib/siteMetadata";
+import {
+  FEED_ALTERNATE_TYPES,
+  SITE_DESCRIPTION,
+} from "@/app/_lib/siteMetadata";
 
 // The first image in the body, as an Open Graph image, or undefined when there is none.
 function firstImage(body) {
@@ -20,7 +23,7 @@ function firstImage(body) {
 
 export async function generateStaticParams() {
   const posts = await getPosts();
-  return posts.map((post) => ({ slug: post.id }));
+  return posts.map((post) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({ params }) {
@@ -36,7 +39,7 @@ export async function generateMetadata({ params }) {
   return {
     title,
     description,
-    alternates: { canonical: `/blog/${slug}` },
+    alternates: { canonical: `/blog/${slug}`, types: FEED_ALTERNATE_TYPES },
     openGraph: {
       type: "article",
       title,
